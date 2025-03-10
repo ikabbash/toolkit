@@ -35,12 +35,11 @@ apiVersion: k8s.nginx.org/v1
 kind: VirtualServer
 metadata:
   name: vs-test
-  namespace: default 
 spec:
   host: test.com
   upstreams:
   - name: nginx
-    service: nginx
+    service: nginx-service
     port: 80
     client-max-body-size: 100m
   routes:
