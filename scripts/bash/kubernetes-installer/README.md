@@ -30,3 +30,4 @@
 - https://github.com/kubernetes-sigs/kubespray/blob/master/inventory/sample/group_vars/all/etcd.yml#L16
 - https://github.com/kubernetes-sigs/kubespray/blob/master/docs/CNI/cilium.md
 - https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/
+- https://github.com/kubernetes-sigs/kubespray/issues/12276
