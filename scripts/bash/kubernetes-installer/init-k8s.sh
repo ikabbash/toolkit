@@ -202,7 +202,7 @@ controller:
 EOF
   # Install Ingress Controller
   sudo su -c "kubectl create namespace nginx-ingress"
-  sudo su -c "helm upgrade -i -n nginx-ingress nginx-ingress oci://ghcr.io/nginxinc/charts/nginx-ingress -f nginx-controller-values.yml"
+  sudo su -c "helm upgrade -i -n nginx-ingress nginx-ingress oci://ghcr.io/nginx/charts/nginx-ingress -f nginx-controller-values.yml"
 }
 
 # Main function
