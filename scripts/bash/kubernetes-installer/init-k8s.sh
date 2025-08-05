@@ -31,6 +31,10 @@ SSH_PORT="22"
 CLUSTER_NODES_IPS=(192.168.1.101 192.168.1.104) # CHANGE THIS
 KUBESPRAY_SRC_DIR="/usr/local/src/kubespray"
 KUBESPRAY_INV_FILE="${KUBESPRAY_SRC_DIR}"/inventory/mycluster/hosts.ini
+ETCD_MODE="host" # Either host or kubeadm (static pod)
+ETCD_CONFIG_FILE="${KUBESPRAY_SRC_DIR}"/inventory/mycluster/group_vars/all/etcd.yml
+CNI_PLUGIN="cilium" # cilium, calico, or cni
+CNI_CONFIG_FILE="${KUBESPRAY_SRC_DIR}"/inventory/mycluster/group_vars/k8s_cluster/k8s-cluster.yml
 KUBESPRAY_VERSION=$(get_latest_release "kubernetes-sigs/kubespray")
 PYTHON_ENV_DIR="${KUBESPRAY_SRC_DIR}/python-venv"
 HELM_VERSION=$(get_latest_release "helm/helm")
@@ -122,7 +126,26 @@ setup_kubespray () {
       echo -e "node${counter} ansible_host=${ip} ip=${ip}" >> "${KUBESPRAY_INV_FILE}"
       ((counter++))
   done
-  echo -e "[defaults]\nroles_path = /usr/local/src/kubespray/roles" > ~/.ansible.cfg
+  # etcd config
+  if [[ "${ETCD_MODE}" == "host" || "${ETCD_MODE}" == "kubeadm" ]]; then
+    sed -i "s/^etcd_deployment_type: .*/etcd_deployment_type: ${ETCD_MODE}/" "${ETCD_CONFIG_FILE}"
+  else
+      echo "Invalid ETCD_MODE: ${ETCD_MODE}. Must be 'host' or 'kubeadm'."
+      exit 1
+  fi
+  # cni config
+  if [[ "${CNI_PLUGIN}" == "cni" || "${CNI_PLUGIN}" == "calico" || "${CNI_PLUGIN}" == "cilium" ]]; then
+      sed -i "s/^kube_network_plugin: .*/kube_network_plugin: ${CNI_PLUGIN}/" "${CNI_CONFIG_FILE}"
+      sed -i "s/^kube_owner: .*/kube_owner: root/" "${CNI_CONFIG_FILE}"
+  else
+      echo "Invalid CNI_PLUGIN: ${CNI_PLUGIN}. Must be 'cni', 'calico' or 'cilium'."
+      exit 1
+  fi
+  # If it's a single-node cluster with Cilium installed
+  if [ "${#CLUSTER_NODES_IPS[@]}" -eq 1 ] && [ "$CNI_PLUGIN" = "cilium" ]; then
+    echo "cilium_operator_replicas: 1" >> "${KUBESPRAY_SRC_DIR}"/inventory/mycluster/group_vars/k8s_cluster/k8s-net-cilium.yml
+  fi
+  echo -e "[defaults]\nroles_path = "${KUBESPRAY_SRC_DIR}"/roles" > ~/.ansible.cfg
 }
 
 # Step 5: Install Kubernetes
@@ -141,6 +164,11 @@ install_kubernetes () {
   done
   # Exit Python venv
   deactivate
+  # Enable kubectl bash completion and set k as alias
+  echo 'source <(kubectl completion bash)' >> ~/.bashrc
+  echo 'alias k=kubectl' >> ~/.bashrc
+  echo 'complete -F __start_kubectl k' >> ~/.bashrc
+  sudo cp -ra /root/.kube ~/.kube && sudo chown -R $UID:$UID ~/.kube
 }
 
 # Step 6: Install latest version of Helm and Nginx ingress controller
