@@ -183,6 +183,9 @@ install_ingress_controller () {
 controller:
   kind: daemonset
   hostNetwork: true
+  # enableCustomResources: true
+  # enableTLSPassthrough: true
+  # tlsPassThroughPort: 443
   service:
     create: false
   config:
